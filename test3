@@ -1,0 +1,76 @@
+// Fonction pour afficher la répartition des sources de liquidité
+async function displayLiquidityBreakdown(quoteData) {
+  // Extraire les informations de la route depuis la réponse de la quote
+  const route = quoteData.route.fills;
+
+  // Initialiser un objet pour contenir les sources de liquidité et leurs proportions
+  const liquidityBreakdown = {};
+
+  // Parcourir chaque "fill" pour calculer la répartition des sources
+  route.forEach(fill => {
+    const source = fill.source;
+    const proportionBps = parseInt(fill.proportionBps, 10);
+    liquidityBreakdown[source] = proportionBps / 100; // Convertir les BPS en pourcentage
+  });
+
+  // Afficher la répartition des sources de liquidité
+  const liquiditySources = Object.keys(liquidityBreakdown);
+  console.log(`${liquiditySources.length} Sources`);
+  liquiditySources.forEach(source => {
+    console.log(`${source}: ${liquidityBreakdown[source]}%`);
+  });
+}
+
+// Fonction pour récupérer une quote avec les paramètres de monétisation (commission et surplus)
+async function getQuoteWithMonetization(fromToken, toToken, amount, affiliateAddress) {
+  const response = await fetch(`https://api.0x.org/swap/v1/quote?fromToken=${fromToken}&toToken=${toToken}&amount=${amount}&affiliateAddress=${affiliateAddress}&affiliateFee=30`);
+  const quote = await response.json();
+  
+  console.log('Quote avec monétisation:', quote);
+  
+  // Afficher la répartition des sources de liquidité
+  await displayLiquidityBreakdown(quote);
+  
+  // Afficher les taxes d'achat/vente
+  await displayTokenTax(quote);
+}
+
+// Fonction pour afficher les taxes d'achat et de vente des tokens
+async function displayTokenTax(quoteData) {
+  const tokenMetadata = quoteData.tokenMetadata;
+
+  if (tokenMetadata.buyToken && tokenMetadata.buyToken.buyTaxBps) {
+    const buyTax = parseInt(tokenMetadata.buyToken.buyTaxBps, 10) / 100; // Convertir en pourcentage
+    console.log(`Taxe d'achat du token de base: ${buyTax}%`);
+  }
+
+  if (tokenMetadata.sellToken && tokenMetadata.sellToken.sellTaxBps) {
+    const sellTax = parseInt(tokenMetadata.sellToken.sellTaxBps, 10) / 100; // Convertir en pourcentage
+    console.log(`Taxe de vente du token de base: ${sellTax}%`);
+  }
+}
+
+// Fonction pour récupérer les sources de liquidité disponibles sur la chaîne Scroll
+async function fetchLiquiditySources() {
+  const response = await fetch('https://api.0x.org/swap/v1/sources?chainId=scroll');
+  const data = await response.json();
+
+  console.log('Sources de liquidité pour la chaîne Scroll :');
+  data.sources.forEach(source => {
+    console.log(source);
+  });
+}
+
+// Exemple d'utilisation des fonctions
+
+// Remplacer par les tokens et l'adresse d'affiliation de ton choix
+const fromToken = 'WETH';
+const toToken = 'USDC';
+const amount = '1000000000000000000'; // Exemple : 1 WETH
+const affiliateAddress = '0xYourAffiliateAddressHere'; // Adresse d'affiliation
+
+// Récupérer et afficher la quote avec monétisation
+getQuoteWithMonetization(fromToken, toToken, amount, affiliateAddress);
+
+// Récupérer et afficher les sources de liquidité pour la chaîne Scroll
+fetchLiquiditySources();
